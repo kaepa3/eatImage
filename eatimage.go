@@ -8,10 +8,19 @@ import (
 
 	"fmt"
 
+	"github.com/BurntSushi/toml"
 	esa "github.com/hiroakis/esa-go"
 	"github.com/kaepa3/eatimage/conf"
 	"github.com/kaepa3/eatimage/extraction"
 )
+
+type OutputFormat struct {
+	Category string `toml:"category"`
+	Body     string `toml:"body"`
+}
+type ArayFormat struct {
+	Records []OutputFormat `toml:"records"`
+}
 
 var config conf.Config
 var ConfigPath = "./config.toml"
@@ -25,6 +34,7 @@ func main() {
 
 	//get all posts
 	var list []string
+	var bodys ArayFormat
 	page := 0
 	count := 0
 	for {
@@ -38,11 +48,19 @@ func main() {
 			for _, val := range extraction.LinkImage(strings.NewReader(val.BodyHtml)) {
 				list = append(list, val)
 			}
+			info := OutputFormat{Category: val.FullName, Body: replaceChangeLine(val.BodyMd)}
+			bodys.Records = append(bodys.Records, info)
 		}
+		break
 		page++
 	}
 	fmt.Println("count:", len(list))
-	saveImage(list)
+	//saveImage(list)
+	outputToml(bodys)
+}
+
+func replaceChangeLine(text string) string {
+	return text
 }
 
 func saveImage(list []string) {
@@ -71,4 +89,16 @@ func save(url string) {
 func urlToFileName(text string) string {
 	pos := strings.LastIndex(text, "/") + 1
 	return text[pos:]
+}
+
+func outputToml(list ArayFormat) {
+	fp, err := os.OpenFile("../crowinport/result.toml", os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer fp.Close()
+	encoder := toml.NewEncoder(fp)
+	err = encoder.Encode(list)
+
 }
