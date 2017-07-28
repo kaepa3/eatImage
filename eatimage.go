@@ -15,8 +15,9 @@ import (
 )
 
 type OutputFormat struct {
-	Category string `toml:"category"`
-	Body     string `toml:"body"`
+	Category string   `toml:"category"`
+	Body     string   `toml:"body"`
+	Images   []string `toml:"images"`
 }
 type ArayFormat struct {
 	Records []OutputFormat `toml:"records"`
@@ -26,7 +27,6 @@ var config conf.Config
 var ConfigPath = "./config.toml"
 
 func main() {
-
 	config.ReadConfig(ConfigPath)
 
 	// Initializing client
@@ -45,17 +45,18 @@ func main() {
 		}
 		for _, val := range posts.Posts {
 			count++
-			for _, val := range extraction.LinkImage(strings.NewReader(val.BodyHtml)) {
-				list = append(list, val)
+			var imageList []string
+			for _, text := range extraction.LinkImage(strings.NewReader(val.BodyHtml)) {
+				list = append(list, text)
+				imageList = append(imageList, urlToFileName(text))
 			}
-			info := OutputFormat{Category: val.FullName, Body: replaceChangeLine(val.BodyMd)}
+			info := OutputFormat{Category: val.FullName, Body: replaceChangeLine(val.BodyMd), Images: imageList}
 			bodys.Records = append(bodys.Records, info)
 		}
-		break
 		page++
 	}
 	fmt.Println("count:", len(list))
-	//saveImage(list)
+	saveImage(list)
 	outputToml(bodys)
 }
 
@@ -92,7 +93,7 @@ func urlToFileName(text string) string {
 }
 
 func outputToml(list ArayFormat) {
-	fp, err := os.OpenFile("../crowinport/result.toml", os.O_WRONLY|os.O_CREATE, 0600)
+	fp, err := os.OpenFile("result.toml", os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		fmt.Println(err)
 		return
